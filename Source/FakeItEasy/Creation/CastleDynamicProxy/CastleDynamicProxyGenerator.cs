@@ -1,4 +1,7 @@
-﻿namespace FakeItEasy.Creation.CastleDynamicProxy
+﻿using System.Diagnostics;
+using System.IO;
+
+namespace FakeItEasy.Creation.CastleDynamicProxy
 {
     using System;
     using System.Collections.Generic;
@@ -16,7 +19,7 @@
         : IProxyGenerator
     {
         private static readonly ProxyGenerationOptions ProxyGenerationOptions = new ProxyGenerationOptions { Hook = new InterceptEverythingHook() };
-        private static readonly ProxyGenerator ProxyGenerator = new ProxyGenerator();
+        private static readonly ProxyGenerator ProxyGenerator = new ProxyGenerator (new DefaultProxyBuilder (new ModuleScope (true)));
         private readonly CastleDynamicProxyInterceptionValidator interceptionValidator;
 
         [SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline", Justification = "No field initialization.")]
@@ -142,12 +145,16 @@
         {
             var argumentsArray = GetConstructorArgumentsArray(argumentsForConstructor);
 
-            return ProxyGenerator.CreateClassProxy(
-                typeOfProxy,
-                allInterfacesToImplement.ToArray(),
-                ProxyGenerationOptions,
-                argumentsArray,
-                interceptor);
+
+          object classProxy = ProxyGenerator.CreateClassProxy(
+              typeOfProxy,
+              allInterfacesToImplement.ToArray(),
+              ProxyGenerationOptions,
+              argumentsArray,
+              interceptor);
+
+          //Console.WriteLine ("Path: " + ProxyGenerator.ProxyBuilder.ModuleScope.SaveAssembly(false));
+          return classProxy;
         }
 
         private static object[] GetConstructorArgumentsArray(IEnumerable<object> argumentsForConstructor)
@@ -213,6 +220,10 @@
                 else if (invocation.Method.Equals(TagSetMethod))
                 {
                     this.tag = invocation.Arguments[0];
+                }
+                else if (invocation.Method.Name.Equals("get_VirtualInt"))
+                {
+                    invocation.ReturnValue = 1234;
                 }
                 else
                 {
